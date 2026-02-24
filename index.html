@@ -487,6 +487,61 @@
   .tag-family { background: #e8fde8; color: #206020; }
   .tag-logistics { background: #fdf0e8; color: #a06020; }
 
+  /* ===== TASKS ===== */
+  .task-item {
+    background: var(--white);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 10px var(--shadow);
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    transition: all 0.2s;
+    border-left: 4px solid #e8ddd8;
+  }
+  .task-item.done { opacity: 0.55; border-left-color: #8dcc9d; }
+  .task-item.priority-high { border-left-color: #e09090; }
+  .task-item.priority-medium { border-left-color: #f0c060; }
+  .task-item.priority-low { border-left-color: #8dcc9d; }
+  .task-item.done .task-title { text-decoration: line-through; color: var(--soft); }
+  .task-check {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--rose-light);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+    transition: all 0.2s;
+    background: transparent;
+    font-size: 0.8rem;
+  }
+  .task-check.checked { background: #6dab7d; border-color: #6dab7d; color: white; }
+  .task-title { font-weight: 500; font-size: 0.92rem; }
+  .task-meta { font-size: 0.72rem; color: var(--soft); margin-top: 3px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .task-actions { display: flex; gap: 6px; margin-left: auto; flex-shrink: 0; }
+
+  /* ===== GUEST CHECK-IN ===== */
+  .guest-card {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 2px 12px var(--shadow);
+    margin-bottom: 12px;
+    border-left: 4px solid var(--gold-light);
+    transition: all 0.2s;
+  }
+  .guest-card.checked-in { border-left-color: #6dab7d; }
+  .guest-card.checked-out { border-left-color: #a0a0c0; opacity: 0.7; }
+  .guest-name { font-weight: 600; font-size: 0.95rem; color: var(--deep); }
+  .guest-meta { font-size: 0.78rem; color: var(--soft); margin-top: 4px; display: flex; gap: 12px; flex-wrap: wrap; }
+  .guest-status-badge { padding: 3px 10px; border-radius: 20px; font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .gs-registered { background: #fef3c7; color: #856404; }
+  .gs-checkedin { background: #d4f0dc; color: #3a7a4a; }
+  .gs-checkedout { background: #e8e8f0; color: #505080; }
+  .guest-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+
   /* Responsive tweaks */
   @media(max-width: 600px) {
     .stats-grid { grid-template-columns: 1fr 1fr; }
@@ -525,6 +580,8 @@
   <div class="nav-tab" data-tab="rooms"><span class="tab-icon">🏨</span> Rooms</div>
   <div class="nav-tab" data-tab="schedule"><span class="tab-icon">📅</span> Schedule</div>
   <div class="nav-tab" data-tab="sangeet"><span class="tab-icon">🎶</span> Sangeet</div>
+  <div class="nav-tab" data-tab="tasks"><span class="tab-icon">✅</span> Tasks</div>
+  <div class="nav-tab" data-tab="guestcheckin"><span class="tab-icon">🛎️</span> Guest Check-in</div>
   <div class="nav-tab" data-tab="settings"><span class="tab-icon">⚙️</span> Settings</div>
 </nav>
 
@@ -554,6 +611,15 @@
       <span id="paidLabel">₹0 paid</span>
       <span id="budgetLabel">₹0 budget</span>
     </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div class="section-title" style="font-size:1.3rem">Task Tracker</div>
+      <button class="btn btn-outline btn-sm" onclick="showTab('tasks')">View All →</button>
+    </div>
+    <div id="dashTaskProgress" style="margin-bottom:12px"></div>
+    <div id="dashTaskList"></div>
   </div>
 
   <div class="card">
@@ -709,6 +775,89 @@
   </div>
 </div>
 
+<!-- ===== TASKS ===== -->
+<div class="page" id="tab-tasks">
+  <div class="section-title">Task List</div>
+  <div class="section-sub">End-to-end wedding checklist</div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+      <div id="taskSummary" style="font-size:0.85rem;color:var(--soft)">0 of 0 tasks done</div>
+      <button class="btn btn-primary" onclick="openTaskModal()">+ Add Task</button>
+    </div>
+    <div class="progress-wrap" style="margin-top:12px"><div class="progress-bar" id="taskProgressBar" style="width:0%"></div></div>
+  </div>
+
+  <!-- Category filter -->
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px" id="taskCatFilter">
+    <button class="fn-tab active" data-cat="all" onclick="filterTasks('all')">All</button>
+    <button class="fn-tab" data-cat="venue" onclick="filterTasks('venue')">🏛 Venue</button>
+    <button class="fn-tab" data-cat="catering" onclick="filterTasks('catering')">🍽 Catering</button>
+    <button class="fn-tab" data-cat="attire" onclick="filterTasks('attire')">👗 Attire</button>
+    <button class="fn-tab" data-cat="decor" onclick="filterTasks('decor')">🌸 Decor</button>
+    <button class="fn-tab" data-cat="photography" onclick="filterTasks('photography')">📸 Photography</button>
+    <button class="fn-tab" data-cat="invites" onclick="filterTasks('invites')">💌 Invites</button>
+    <button class="fn-tab" data-cat="travel" onclick="filterTasks('travel')">✈️ Travel</button>
+    <button class="fn-tab" data-cat="other" onclick="filterTasks('other')">📌 Other</button>
+  </div>
+
+  <div id="taskList"></div>
+  <div id="taskEmpty" class="empty-state" style="display:none">
+    <div class="empty-icon">✅</div>
+    <p>No tasks yet. Add your first!</p>
+  </div>
+</div>
+
+<!-- ===== GUEST CHECK-IN ===== -->
+<div class="page" id="tab-guestcheckin">
+  <div class="section-title">Guest Check-in</div>
+  <div class="section-sub">Self-service for guests</div>
+
+  <!-- Stats bar -->
+  <div class="stats-grid" style="margin-bottom:20px" id="guestStats"></div>
+
+  <!-- Guest self-registration form -->
+  <div class="card" style="border-left:4px solid var(--gold)">
+    <div style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;font-style:italic;color:var(--deep);margin-bottom:14px">👋 Guests — Enter Your Details</div>
+    <div class="form-row">
+      <div class="form-group"><label>Your Name</label><input type="text" id="gcName" placeholder="Full name"></div>
+      <div class="form-group"><label>Phone Number</label><input type="tel" id="gcPhone" placeholder="+91..."></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Relation to Couple</label>
+        <select id="gcRelation">
+          <option>Bride's Family</option><option>Groom's Family</option>
+          <option>Bride's Friend</option><option>Groom's Friend</option>
+          <option>Colleague</option><option>Other</option>
+        </select>
+      </div>
+      <div class="form-group"><label>No. of People</label><input type="number" id="gcPeople" placeholder="1" min="1" value="1"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Room Number (if assigned)</label><input type="text" id="gcRoom" placeholder="e.g. 204"></div>
+      <div class="form-group"><label>Staying At</label>
+        <select id="gcStaying">
+          <option>Venue Hotel</option><option>Own Arrangement</option><option>Day Guest (No Stay)</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label>Any dietary preference / note</label><input type="text" id="gcNote" placeholder="Veg only, allergies, etc."></div>
+    <button class="btn btn-gold" style="width:100%;margin-top:4px" onclick="guestRegister()">🎉 Register My Arrival</button>
+  </div>
+
+  <!-- Search -->
+  <div style="margin:16px 0 10px">
+    <input type="text" id="gcSearch" placeholder="🔍 Search guest name or room..." style="width:100%;padding:10px 14px;border:1.5px solid #e8ddd8;border-radius:8px;font-family:'Jost',sans-serif;font-size:0.88rem;outline:none;background:var(--cream)" oninput="renderGuests()">
+  </div>
+
+  <!-- Guest list -->
+  <div id="guestList"></div>
+  <div id="guestEmpty" class="empty-state" style="display:none">
+    <div class="empty-icon">🛎️</div>
+    <p>No guests registered yet</p>
+  </div>
+</div>
+
 <!-- ===== SETTINGS ===== -->
 <div class="page" id="tab-settings">
   <div class="section-title">Settings</div>
@@ -828,6 +977,7 @@
       <div class="form-group"><label>Check-out</label><input type="date" id="rCheckout"></div>
     </div>
     <div class="form-group"><label>Notes</label><input type="text" id="rNotes" placeholder="Family side, VIP, etc."></div>
+    <div class="form-group"><label>Guest WhatsApp Number</label><input type="tel" id="rPhone" placeholder="+91 98765 43210 (for room notification)"></div>
     <input type="hidden" id="rEditId">
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('roomModal')">Cancel</button>
@@ -876,6 +1026,39 @@
   </div>
 </div>
 
+<!-- Task Modal -->
+<div class="modal-overlay" id="taskModal">
+  <div class="modal">
+    <div class="modal-title" id="taskModalTitle">Add Task</div>
+    <div class="form-group"><label>Task Title</label><input type="text" id="tTitle" placeholder="e.g. Book photographer"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Category</label>
+        <select id="tCat">
+          <option value="venue">🏛 Venue</option><option value="catering">🍽 Catering</option>
+          <option value="attire">👗 Attire</option><option value="decor">🌸 Decor</option>
+          <option value="photography">📸 Photography</option><option value="invites">💌 Invites</option>
+          <option value="travel">✈️ Travel</option><option value="other">📌 Other</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Priority</label>
+        <select id="tPriority">
+          <option value="high">🔴 High</option><option value="medium">🟡 Medium</option><option value="low">🟢 Low</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Due Date</label><input type="date" id="tDue"></div>
+      <div class="form-group"><label>Assigned To</label><input type="text" id="tAssigned" placeholder="Person responsible"></div>
+    </div>
+    <div class="form-group"><label>Notes</label><textarea id="tNotes" rows="2" placeholder="Any extra details..."></textarea></div>
+    <input type="hidden" id="tEditId">
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('taskModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTask()">Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- Lightbox -->
 <div class="lightbox" id="lightbox">
   <button class="lightbox-close" onclick="closeLightbox()">✕</button>
@@ -889,16 +1072,39 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- Loading overlay -->
+<div id="loadingOverlay" style="display:flex;position:fixed;inset:0;background:rgba(44,31,26,0.85);z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:16px">
+  <div style="font-family:'Cormorant Garamond',serif;font-size:2rem;color:#e8d9b5;font-style:italic">Loading your wedding data…</div>
+  <div style="width:48px;height:48px;border:3px solid rgba(229,212,185,0.3);border-top-color:#e8d9b5;border-radius:50%;animation:spin 0.8s linear infinite"></div>
+  <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+</div>
+
+<!-- Sync status indicator -->
+<div id="syncStatus" style="position:fixed;top:8px;right:12px;font-size:0.7rem;z-index:98;font-family:'Jost',sans-serif;pointer-events:none;color:#6dab7d"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+
 <script>
+// ============ FIREBASE INIT ============
+const firebaseConfig = {
+  apiKey: "AIzaSyDmla2cnNCjfGv34C81trPfzhB96KI0LjI",
+  authDomain: "mywedding2026-59720.firebaseapp.com",
+  projectId: "mywedding2026-59720",
+  storageBucket: "mywedding2026-59720.firebasestorage.app",
+  messagingSenderId: "181133447156",
+  appId: "1:181133447156:web:4797b278ea4b79016433a1"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const fbStorage = firebase.storage();
+
 // ============ DATA STORE ============
 let data = {
   settings: { names: '', date: '', venue: '', budget: 500000, drive: '' },
-  expenses: [],
-  contacts: [],
-  rooms: [],
-  schedule: [],
-  performances: [],
-  photos: {}  // { fn: [{id, src, name}] }
+  expenses: [], contacts: [], rooms: [], schedule: [],
+  performances: [], photos: {}, tasks: [], guests: []
 };
 
 let currentPhotoFn = 'all';
@@ -906,25 +1112,124 @@ let lightboxPhotos = [];
 let lightboxIdx = 0;
 let dragSrcEl = null;
 
-// ============ STORAGE ============
-async function loadData() {
+const COLLECTIONS = ['expenses','contacts','rooms','schedule','performances','tasks','guests'];
+
+// ============ FIREBASE HELPERS ============
+function setSyncStatus(status) {
+  const el = document.getElementById('syncStatus');
+  if (!el) return;
+  const map = { syncing:'🔄 Syncing…', ok:'☁️ Saved to Firebase', error:'⚠️ Offline — retry later' };
+  el.textContent = map[status]||'';
+  el.style.color = status==='error'?'#e07070':status==='ok'?'#6dab7d':'#b5985a';
+  if (status==='ok') setTimeout(()=>{ if(el.textContent.includes('Saved')) el.textContent=''; }, 3000);
+}
+
+async function saveItem(col, item) {
+  setSyncStatus('syncing');
   try {
-    const r = await window.storage.get('weddingData');
-    if (r && r.value) {
-      data = JSON.parse(r.value);
-      if (!data.photos) data.photos = {};
-    }
-  } catch(e) {}
+    await db.collection(col).doc(String(item.id)).set(item);
+    setSyncStatus('ok');
+    // Also keep localStorage as offline fallback
+    try { localStorage.setItem('weddingFallback', JSON.stringify(data)); } catch(e){}
+  } catch(e) {
+    console.warn('Firestore save failed:', e);
+    setSyncStatus('error');
+    try { localStorage.setItem('weddingFallback', JSON.stringify(data)); } catch(le){}
+  }
+}
+
+async function deleteItem(col, id) {
+  setSyncStatus('syncing');
+  try {
+    await db.collection(col).doc(String(id)).delete();
+    setSyncStatus('ok');
+    try { localStorage.setItem('weddingFallback', JSON.stringify(data)); } catch(e){}
+  } catch(e) {
+    setSyncStatus('error');
+    try { localStorage.setItem('weddingFallback', JSON.stringify(data)); } catch(le){}
+  }
+}
+
+async function saveSettings_db(settings) {
+  setSyncStatus('syncing');
+  try {
+    await db.collection('settings').doc('main').set(settings);
+    setSyncStatus('ok');
+    try { localStorage.setItem('weddingFallback', JSON.stringify(data)); } catch(e){}
+  } catch(e) {
+    setSyncStatus('error');
+    try { localStorage.setItem('weddingFallback', JSON.stringify(data)); } catch(le){}
+  }
+}
+
+function showLoadingOverlay(show) {
+  document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
+}
+
+async function loadData() {
+  showLoadingOverlay(true);
+  try {
+    // Load settings
+    const settingsDoc = await db.collection('settings').doc('main').get();
+    if (settingsDoc.exists) data.settings = settingsDoc.data();
+
+    // Load all collections in parallel
+    const promises = COLLECTIONS.map(col =>
+      db.collection(col).get().then(snap => { data[col] = snap.docs.map(d => d.data()); })
+    );
+    await Promise.all(promises);
+
+    // Sort performances by orderIndex if present
+    data.performances.sort((a,b) => (a.orderIndex||0)-(b.orderIndex||0));
+
+    // Load photo metadata from Firestore
+    const photoSnap = await db.collection('photos').get();
+    data.photos = {};
+    photoSnap.docs.forEach(d => {
+      const p = d.data();
+      if (!data.photos[p.fn]) data.photos[p.fn] = [];
+      data.photos[p.fn].push(p);
+    });
+
+    setSyncStatus('ok');
+    // Save to localStorage as offline backup
+    try { localStorage.setItem('weddingFallback', JSON.stringify(data)); } catch(e){}
+  } catch(e) {
+    console.warn('Firebase load failed, using localStorage fallback:', e);
+    setSyncStatus('error');
+    try {
+      const fb = localStorage.getItem('weddingFallback');
+      if (fb) Object.assign(data, JSON.parse(fb));
+    } catch(le){}
+  }
+  showLoadingOverlay(false);
   applySettings();
   renderAll();
   updateCountdown();
   setInterval(updateCountdown, 60000);
 }
 
+// saveData: full batch save — used only for import/clear
 async function saveData() {
+  setSyncStatus('syncing');
   try {
-    await window.storage.set('weddingData', JSON.stringify(data));
-  } catch(e) {}
+    await db.collection('settings').doc('main').set(data.settings);
+    for (const col of COLLECTIONS) {
+      for (const item of (data[col]||[])) {
+        await db.collection(col).doc(String(item.id)).set(item);
+      }
+    }
+    for (const fn in data.photos) {
+      for (const p of (data.photos[fn]||[])) {
+        await db.collection('photos').doc(String(p.id)).set(p);
+      }
+    }
+    setSyncStatus('ok');
+    try { localStorage.setItem('weddingFallback', JSON.stringify(data)); } catch(e){}
+  } catch(e) {
+    setSyncStatus('error');
+    try { localStorage.setItem('weddingFallback', JSON.stringify(data)); } catch(le){}
+  }
 }
 
 // ============ TABS ============
@@ -940,9 +1245,10 @@ function showTab(name) {
   if (name === 'rooms') renderRooms();
   if (name === 'schedule') renderSchedule();
   if (name === 'sangeet') renderPerformances();
+  if (name === 'tasks') renderTasks();
+  if (name === 'guestcheckin') renderGuests();
   if (name === 'settings') loadSettingsForm();
 }
-
 document.getElementById('navTabs').addEventListener('click', e => {
   const tab = e.target.closest('.nav-tab');
   if (tab) showTab(tab.dataset.tab);
@@ -955,14 +1261,11 @@ function saveSettings() {
   data.settings.venue = document.getElementById('settingVenue').value;
   data.settings.budget = parseFloat(document.getElementById('settingBudget').value) || 0;
   data.settings.drive = document.getElementById('settingDrive').value;
-  applySettings();
-  saveData();
-  toast('Settings saved!');
+  applySettings(); saveSettings_db(data.settings); toast('Settings saved to Firebase! ☁️');
 }
-
 function applySettings() {
   const s = data.settings;
-  document.getElementById('weddingTitle').textContent = s.names ? `${s.names}` : '✦ Wedding Planner ✦';
+  document.getElementById('weddingTitle').textContent = s.names || '✦ Wedding Planner ✦';
   document.getElementById('weddingNames').textContent = s.venue || 'Your wedding planner';
   if (s.drive) {
     document.getElementById('driveLinkCard').style.display = 'block';
@@ -970,7 +1273,6 @@ function applySettings() {
     document.getElementById('driveLinkDisplay').textContent = 'Open Google Drive Album →';
   }
 }
-
 function loadSettingsForm() {
   const s = data.settings;
   document.getElementById('settingNames').value = s.names || '';
@@ -984,537 +1286,434 @@ function loadSettingsForm() {
 function updateCountdown() {
   if (!data.settings.date) return;
   const wedding = new Date(data.settings.date + 'T00:00:00');
-  const now = new Date();
-  const diff = wedding - now;
+  const now = new Date(); const diff = wedding - now;
   if (diff < 0) { document.getElementById('cd-days').textContent = '🎉'; return; }
-  const days = Math.floor(diff / 86400000);
-  const hours = Math.floor((diff % 86400000) / 3600000);
-  const mins = Math.floor((diff % 3600000) / 60000);
-  document.getElementById('cd-days').textContent = days;
-  document.getElementById('cd-hours').textContent = hours;
-  document.getElementById('cd-mins').textContent = mins;
+  document.getElementById('cd-days').textContent = Math.floor(diff / 86400000);
+  document.getElementById('cd-hours').textContent = Math.floor((diff % 86400000) / 3600000);
+  document.getElementById('cd-mins').textContent = Math.floor((diff % 3600000) / 60000);
 }
 
 // ============ DASHBOARD ============
 function renderDashboard() {
   const budget = data.settings.budget || 0;
-  const totalExp = data.expenses.reduce((s,e) => s + (e.amount||0), 0);
-  const totalPaid = data.expenses.reduce((s,e) => s + (e.paid||0), 0);
+  const totalExp = data.expenses.reduce((s,e) => s+(e.amount||0), 0);
+  const totalPaid = data.expenses.reduce((s,e) => s+(e.paid||0), 0);
   const unpaid = totalExp - totalPaid;
   const pct = budget ? Math.min(100, Math.round(totalPaid/budget*100)) : 0;
-
   document.getElementById('dashStats').innerHTML = `
     <div class="stat-card"><div class="stat-value">${data.expenses.length}</div><div class="stat-label">Expenses</div></div>
-    <div class="stat-card gold"><div class="stat-value">₹${fmt(totalExp)}</div><div class="stat-label">Total Budget</div></div>
+    <div class="stat-card gold"><div class="stat-value">₹${fmt(totalExp)}</div><div class="stat-label">Total</div></div>
     <div class="stat-card green"><div class="stat-value">₹${fmt(totalPaid)}</div><div class="stat-label">Paid</div></div>
-    <div class="stat-card red"><div class="stat-value">₹${fmt(unpaid)}</div><div class="stat-label">Remaining</div></div>
-  `;
+    <div class="stat-card red"><div class="stat-value">₹${fmt(unpaid)}</div><div class="stat-label">Remaining</div></div>`;
   document.getElementById('dashProgress').style.width = pct + '%';
   document.getElementById('paidLabel').textContent = `₹${fmt(totalPaid)} paid`;
   document.getElementById('budgetLabel').textContent = `₹${fmt(budget)} budget`;
-  document.getElementById('expTotal').textContent = '₹' + fmt(totalExp);
-
   const recent = [...data.expenses].slice(-5).reverse();
   const rb = document.getElementById('recentExpenses');
-  if (!recent.length) { rb.innerHTML = '<div style="text-align:center;padding:20px;color:var(--soft);font-size:0.85rem">No expenses yet</div>'; return; }
-  rb.innerHTML = recent.map(e => `
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f0e8e4">
-      <div>
-        <div style="font-size:0.9rem;font-weight:500">${e.name}</div>
-        <div style="font-size:0.72rem;color:var(--soft)">${e.category}</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px">
-        <span style="font-weight:600;font-size:0.9rem">₹${fmt(e.amount)}</span>
-        <span class="badge badge-${e.status}">${e.status}</span>
-      </div>
-    </div>
-  `).join('');
+  rb.innerHTML = !recent.length ? '<div style="text-align:center;padding:20px;color:var(--soft);font-size:0.85rem">No expenses yet</div>'
+    : recent.map(e => `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f0e8e4">
+      <div><div style="font-size:0.9rem;font-weight:500">${e.name}</div><div style="font-size:0.72rem;color:var(--soft)">${e.category}</div></div>
+      <div style="display:flex;align-items:center;gap:10px"><span style="font-weight:600;font-size:0.9rem">₹${fmt(e.amount)}</span><span class="badge badge-${e.status}">${e.status}</span></div>
+    </div>`).join('');
+  renderTasks();
 }
 
 // ============ EXPENSES ============
 function renderExpenses() {
   const tbody = document.getElementById('expenseTableBody');
   const empty = document.getElementById('expenseEmpty');
+  const el = document.getElementById('expTotal');
   if (!data.expenses.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
-  empty.style.display = 'none';
-  document.getElementById('expTotal').textContent = '₹' + fmt(data.expenses.reduce((s,e) => s+(e.amount||0),0));
+  empty.style.display='none';
+  if(el) el.textContent = '₹' + fmt(data.expenses.reduce((s,e)=>s+(e.amount||0),0));
   tbody.innerHTML = data.expenses.map((e,i) => `
     <tr>
       <td style="font-weight:500">${e.name}<br><span style="font-size:0.72rem;color:var(--soft)">${e.notes||''}</span></td>
       <td><span style="font-size:0.78rem;background:var(--rose-pale);padding:2px 8px;border-radius:8px;color:var(--mid)">${e.category}</span></td>
       <td>₹${fmt(e.amount)}</td>
       <td><input type="number" value="${e.paid||0}" style="width:90px;padding:4px 8px;border:1px solid #e8ddd8;border-radius:6px;font-size:0.82rem" onchange="updatePaid(${i},this.value)"></td>
-      <td>
-        <select style="border:1px solid #e8ddd8;border-radius:6px;padding:4px 6px;font-size:0.78rem;background:white" onchange="updateStatus(${i},this.value)">
-          <option value="unpaid" ${e.status==='unpaid'?'selected':''}>Not Paid</option>
-          <option value="partial" ${e.status==='partial'?'selected':''}>Partial</option>
-          <option value="paid" ${e.status==='paid'?'selected':''}>Paid</option>
-        </select>
-      </td>
-      <td>
-        <div style="display:flex;gap:6px">
-          <button class="btn btn-sm btn-outline" onclick="editExpense(${i})">✏️</button>
-          <button class="btn btn-sm btn-danger" onclick="deleteExpense(${i})">✕</button>
-        </div>
-      </td>
-    </tr>
-  `).join('');
+      <td><select style="border:1px solid #e8ddd8;border-radius:6px;padding:4px 6px;font-size:0.78rem;background:white" onchange="updateStatus(${i},this.value)">
+        <option value="unpaid" ${e.status==='unpaid'?'selected':''}>Not Paid</option>
+        <option value="partial" ${e.status==='partial'?'selected':''}>Partial</option>
+        <option value="paid" ${e.status==='paid'?'selected':''}>Paid</option>
+      </select></td>
+      <td><div style="display:flex;gap:6px">
+        <button class="btn btn-sm btn-outline" onclick="editExpense(${i})">✏️</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteExpense(${i})">✕</button>
+      </div></td>
+    </tr>`).join('');
 }
-
 function updatePaid(i, val) {
   data.expenses[i].paid = parseFloat(val)||0;
   const e = data.expenses[i];
-  if (e.paid >= e.amount) e.status = 'paid';
-  else if (e.paid > 0) e.status = 'partial';
-  else e.status = 'unpaid';
-  saveData();
-  renderExpenses();
+  e.status = e.paid>=e.amount?'paid':e.paid>0?'partial':'unpaid';
+  saveItem('expenses', e); renderExpenses();
 }
-function updateStatus(i, val) {
-  data.expenses[i].status = val;
-  saveData();
-}
-
+function updateStatus(i, val) { data.expenses[i].status=val; saveItem('expenses',data.expenses[i]); }
 let expEditIdx = -1;
 function openExpenseModal(idx) {
   expEditIdx = idx !== undefined ? idx : -1;
-  document.getElementById('expModalTitle').textContent = expEditIdx >= 0 ? 'Edit Expense' : 'Add Expense';
-  if (expEditIdx >= 0) {
-    const e = data.expenses[expEditIdx];
-    document.getElementById('expName').value = e.name;
-    document.getElementById('expCategory').value = e.category;
-    document.getElementById('expAmount').value = e.amount;
-    document.getElementById('expPaid').value = e.paid||0;
-    document.getElementById('expStatus').value = e.status;
-    document.getElementById('expNotes').value = e.notes||'';
-    document.getElementById('expDue').value = e.due||'';
+  document.getElementById('expModalTitle').textContent = expEditIdx>=0?'Edit Expense':'Add Expense';
+  if (expEditIdx>=0) {
+    const e=data.expenses[expEditIdx];
+    document.getElementById('expName').value=e.name; document.getElementById('expCategory').value=e.category;
+    document.getElementById('expAmount').value=e.amount; document.getElementById('expPaid').value=e.paid||0;
+    document.getElementById('expStatus').value=e.status; document.getElementById('expNotes').value=e.notes||'';
+    document.getElementById('expDue').value=e.due||'';
   } else {
-    document.getElementById('expName').value = '';
-    document.getElementById('expAmount').value = '';
-    document.getElementById('expPaid').value = '0';
-    document.getElementById('expStatus').value = 'unpaid';
-    document.getElementById('expNotes').value = '';
-    document.getElementById('expDue').value = '';
+    ['expName','expNotes','expDue'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('expAmount').value=''; document.getElementById('expPaid').value='0';
+    document.getElementById('expStatus').value='unpaid';
   }
   openModal('expenseModal');
 }
 function editExpense(i) { openExpenseModal(i); }
-function deleteExpense(i) {
-  if (confirm('Delete this expense?')) {
-    data.expenses.splice(i,1);
-    saveData(); renderExpenses(); toast('Expense deleted');
-  }
+async function deleteExpense(i) {
+  if(!confirm('Delete this expense?'))return;
+  const id=data.expenses[i].id; data.expenses.splice(i,1);
+  await deleteItem('expenses',id); renderExpenses(); toast('Expense deleted');
 }
-function saveExpense() {
-  const name = document.getElementById('expName').value.trim();
-  if (!name) { alert('Please enter an item name'); return; }
-  const exp = {
-    name, category: document.getElementById('expCategory').value,
-    amount: parseFloat(document.getElementById('expAmount').value)||0,
-    paid: parseFloat(document.getElementById('expPaid').value)||0,
-    status: document.getElementById('expStatus').value,
-    notes: document.getElementById('expNotes').value,
-    due: document.getElementById('expDue').value,
-    id: Date.now()
+async function saveExpense() {
+  const name=document.getElementById('expName').value.trim();
+  if(!name){alert('Enter item name');return;}
+  const exp={
+    id:expEditIdx>=0?data.expenses[expEditIdx].id:Date.now(), name,
+    category:document.getElementById('expCategory').value,
+    amount:parseFloat(document.getElementById('expAmount').value)||0,
+    paid:parseFloat(document.getElementById('expPaid').value)||0,
+    status:document.getElementById('expStatus').value,
+    notes:document.getElementById('expNotes').value, due:document.getElementById('expDue').value
   };
-  if (expEditIdx >= 0) data.expenses[expEditIdx] = {...data.expenses[expEditIdx], ...exp};
-  else data.expenses.push(exp);
-  saveData(); closeModal('expenseModal'); renderExpenses(); renderDashboard();
-  toast(expEditIdx >= 0 ? 'Expense updated!' : 'Expense added!');
+  if(expEditIdx>=0)data.expenses[expEditIdx]=exp; else data.expenses.push(exp);
+  await saveItem('expenses',exp);
+  closeModal('expenseModal'); renderExpenses(); renderDashboard();
+  toast(expEditIdx>=0?'Expense updated!':'Expense added!');
 }
-function autoStatus() {
-  const amt = parseFloat(document.getElementById('expAmount').value)||0;
-  const paid = parseFloat(document.getElementById('expPaid').value)||0;
-  if (paid >= amt && amt > 0) document.getElementById('expStatus').value = 'paid';
-  else if (paid > 0) document.getElementById('expStatus').value = 'partial';
-  else document.getElementById('expStatus').value = 'unpaid';
+function autoStatus(){
+  const amt=parseFloat(document.getElementById('expAmount').value)||0;
+  const paid=parseFloat(document.getElementById('expPaid').value)||0;
+  document.getElementById('expStatus').value=paid>=amt&&amt>0?'paid':paid>0?'partial':'unpaid';
 }
 
 // ============ PHOTOS ============
-function switchFn(fn) {
-  currentPhotoFn = fn;
-  document.querySelectorAll('.fn-tab').forEach(t => t.classList.toggle('active', t.dataset.fn === fn));
-  document.getElementById('photoFnSelect').value = fn;
-  renderPhotos();
+function switchFn(fn){
+  currentPhotoFn=fn;
+  document.querySelectorAll('.fn-tab').forEach(t=>t.classList.toggle('active',t.dataset.fn===fn));
+  document.getElementById('photoFnSelect').value=fn; renderPhotos();
 }
-
-document.getElementById('fnTabs').addEventListener('click', e => {
-  const t = e.target.closest('.fn-tab');
-  if (t) switchFn(t.dataset.fn);
-});
-
-function renderPhotos() {
-  const all = getAllPhotos();
-  const show = currentPhotoFn === 'all' ? all : (data.photos[currentPhotoFn] || []);
-  const grid = document.getElementById('photosGrid');
-  const empty = document.getElementById('photoEmpty');
-  document.getElementById('photoCount').textContent = `${show.length} photos`;
-  lightboxPhotos = show;
-  if (!show.length) { grid.innerHTML = ''; empty.style.display = 'block'; return; }
-  empty.style.display = 'none';
-  grid.innerHTML = show.map((p,i) => `
+document.getElementById('fnTabs').addEventListener('click',e=>{const t=e.target.closest('.fn-tab');if(t)switchFn(t.dataset.fn);});
+function renderPhotos(){
+  const all=getAllPhotos();
+  const show=currentPhotoFn==='all'?all:(data.photos[currentPhotoFn]||[]);
+  const grid=document.getElementById('photosGrid');const empty=document.getElementById('photoEmpty');
+  document.getElementById('photoCount').textContent=`${show.length} photos`;
+  lightboxPhotos=show;
+  if(!show.length){grid.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  grid.innerHTML=show.map((p,i)=>`
     <div class="photo-thumb" onclick="openLightbox(${i})">
       <img src="${p.src}" alt="${p.name}" loading="lazy">
       <button class="del-photo" onclick="event.stopPropagation();deletePhoto('${p.fn}','${p.id}')">✕</button>
       <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.5));padding:6px 8px;font-size:0.6rem;color:white;text-transform:capitalize">${p.fn}</div>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
-
-function getAllPhotos() {
-  const all = [];
-  for (const fn in data.photos) {
-    (data.photos[fn]||[]).forEach(p => all.push({...p, fn}));
+function getAllPhotos(){const all=[];for(const fn in data.photos)(data.photos[fn]||[]).forEach(p=>all.push({...p,fn}));return all;}
+async function handlePhotoUpload(event){
+  const files=Array.from(event.target.files);
+  const fn=document.getElementById('photoFnSelect').value==='all'?'wedding':document.getElementById('photoFnSelect').value;
+  toast(`Uploading ${files.length} photo(s)…`);
+  for(const file of files){
+    const id=String(Date.now()+Math.random());
+    try{
+      const path=`photos/${fn}/${id}_${file.name}`;
+      const ref=fbStorage.ref(path); await ref.put(file);
+      const url=await ref.getDownloadURL();
+      const photoDoc={id,src:url,name:file.name,fn,path};
+      await db.collection('photos').doc(id).set(photoDoc);
+      if(!data.photos[fn])data.photos[fn]=[];
+      data.photos[fn].push(photoDoc);
+    }catch(e){
+      await new Promise(res=>{const reader=new FileReader();reader.onload=ev=>{if(!data.photos[fn])data.photos[fn]=[];data.photos[fn].push({id,src:ev.target.result,name:file.name,fn});res();};reader.readAsDataURL(file);});
+    }
+    renderPhotos();
   }
-  return all;
+  event.target.value=''; toast(`${files.length} photo(s) uploaded! ✅`);
 }
-
-function handlePhotoUpload(event) {
-  const files = Array.from(event.target.files);
-  const fn = document.getElementById('photoFnSelect').value === 'all' ? 'wedding' : document.getElementById('photoFnSelect').value;
-  files.forEach(file => {
-    const reader = new FileReader();
-    reader.onload = e => {
-      if (!data.photos[fn]) data.photos[fn] = [];
-      data.photos[fn].push({ id: Date.now() + Math.random(), src: e.target.result, name: file.name, fn });
-      saveData(); renderPhotos();
-    };
-    reader.readAsDataURL(file);
-  });
-  event.target.value = '';
-  toast(`${files.length} photo(s) added!`);
+async function deletePhoto(fn,id){
+  if(!data.photos[fn])return;
+  const photo=data.photos[fn].find(p=>String(p.id)===String(id));
+  data.photos[fn]=data.photos[fn].filter(p=>String(p.id)!==String(id));
+  try{await db.collection('photos').doc(String(id)).delete();if(photo&&photo.path)await fbStorage.ref(photo.path).delete().catch(()=>{});}catch(e){}
+  renderPhotos(); toast('Photo deleted');
 }
-
-function deletePhoto(fn, id) {
-  if (!data.photos[fn]) return;
-  data.photos[fn] = data.photos[fn].filter(p => String(p.id) !== String(id));
-  saveData(); renderPhotos(); toast('Photo deleted');
-}
-
-// Drag and drop upload
-const uploadZone = document.getElementById('uploadZone');
-uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
-uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
-uploadZone.addEventListener('drop', e => {
-  e.preventDefault(); uploadZone.classList.remove('dragover');
-  const fakeEvt = { target: { files: e.dataTransfer.files, value: '' } };
-  handlePhotoUpload(fakeEvt);
-});
-
-// Lightbox
-function openLightbox(idx) {
-  lightboxIdx = idx;
-  document.getElementById('lightbox').classList.add('open');
-  document.getElementById('lightboxImg').src = lightboxPhotos[idx].src;
-  document.getElementById('lightboxCount').textContent = `${idx+1} / ${lightboxPhotos.length}`;
-}
-function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); }
-function lightboxNav(dir) {
-  lightboxIdx = (lightboxIdx + dir + lightboxPhotos.length) % lightboxPhotos.length;
-  document.getElementById('lightboxImg').src = lightboxPhotos[lightboxIdx].src;
-  document.getElementById('lightboxCount').textContent = `${lightboxIdx+1} / ${lightboxPhotos.length}`;
-}
-document.getElementById('lightbox').addEventListener('click', e => { if(e.target === e.currentTarget) closeLightbox(); });
+const uploadZone=document.getElementById('uploadZone');
+uploadZone.addEventListener('dragover',e=>{e.preventDefault();uploadZone.classList.add('dragover');});
+uploadZone.addEventListener('dragleave',()=>uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop',e=>{e.preventDefault();uploadZone.classList.remove('dragover');handlePhotoUpload({target:{files:e.dataTransfer.files,value:''}});});
+function openLightbox(idx){lightboxIdx=idx;document.getElementById('lightbox').classList.add('open');document.getElementById('lightboxImg').src=lightboxPhotos[idx].src;document.getElementById('lightboxCount').textContent=`${idx+1} / ${lightboxPhotos.length}`;}
+function closeLightbox(){document.getElementById('lightbox').classList.remove('open');}
+function lightboxNav(dir){lightboxIdx=(lightboxIdx+dir+lightboxPhotos.length)%lightboxPhotos.length;document.getElementById('lightboxImg').src=lightboxPhotos[lightboxIdx].src;document.getElementById('lightboxCount').textContent=`${lightboxIdx+1} / ${lightboxPhotos.length}`;}
+document.getElementById('lightbox').addEventListener('click',e=>{if(e.target===e.currentTarget)closeLightbox();});
 
 // ============ CONTACTS ============
-function renderContacts() {
-  const grid = document.getElementById('contactsGrid');
-  const empty = document.getElementById('contactEmpty');
-  if (!data.contacts.length) { grid.innerHTML=''; empty.style.display='block'; return; }
-  empty.style.display = 'none';
-  const roleColors = { Photographer:'#e8f0fd', Caterer:'#fde8f0', DJ:'#f0fde8', Family:'#fef9e8', Pandit:'#fde8e8' };
-  grid.innerHTML = data.contacts.map((c,i) => `
+function renderContacts(){
+  const grid=document.getElementById('contactsGrid');const empty=document.getElementById('contactEmpty');
+  if(!data.contacts.length){grid.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  grid.innerHTML=data.contacts.map((c,i)=>`
     <div class="contact-card">
-      <div class="contact-role">${c.role}</div>
-      <div class="contact-name">${c.name}</div>
-      ${c.phone ? `<div class="contact-phone">📞 <a href="tel:${c.phone}" style="color:var(--mid);text-decoration:none">${c.phone}</a></div>` : ''}
-      ${c.whatsapp ? `<div class="contact-phone">💬 <a href="https://wa.me/${c.whatsapp.replace(/\D/g,'')}" target="_blank" style="color:var(--mid);text-decoration:none">${c.whatsapp}</a></div>` : ''}
-      ${c.notes ? `<div style="font-size:0.78rem;color:var(--soft)">${c.notes}</div>` : ''}
+      <div class="contact-role">${c.role}</div><div class="contact-name">${c.name}</div>
+      ${c.phone?`<div class="contact-phone">📞 <a href="tel:${c.phone}" style="color:var(--mid);text-decoration:none">${c.phone}</a></div>`:''}
+      ${c.whatsapp?`<div class="contact-phone">💬 <a href="https://wa.me/${c.whatsapp.replace(/\D/g,'')}" target="_blank" style="color:var(--mid);text-decoration:none">${c.whatsapp}</a></div>`:''}
+      ${c.notes?`<div style="font-size:0.78rem;color:var(--soft)">${c.notes}</div>`:''}
       <div class="contact-actions">
-        ${c.phone ? `<a href="tel:${c.phone}" class="btn btn-sm btn-gold" style="text-decoration:none">📞 Call</a>` : ''}
+        ${c.phone?`<a href="tel:${c.phone}" class="btn btn-sm btn-gold" style="text-decoration:none">📞 Call</a>`:''}
         <button class="btn btn-sm btn-outline" onclick="editContact(${i})">✏️</button>
         <button class="btn btn-sm btn-danger" onclick="deleteContact(${i})">✕</button>
       </div>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
-
-let cEditIdx = -1;
-function openContactModal(idx) {
-  cEditIdx = idx !== undefined ? idx : -1;
-  if (cEditIdx >= 0) {
-    const c = data.contacts[cEditIdx];
-    document.getElementById('cName').value = c.name;
-    document.getElementById('cRole').value = c.role;
-    document.getElementById('cPhone').value = c.phone||'';
-    document.getElementById('cWhatsapp').value = c.whatsapp||'';
-    document.getElementById('cNotes').value = c.notes||'';
-  } else {
-    ['cName','cPhone','cWhatsapp','cNotes'].forEach(id => document.getElementById(id).value='');
-  }
+let cEditIdx=-1;
+function openContactModal(idx){
+  cEditIdx=idx!==undefined?idx:-1;
+  if(cEditIdx>=0){const c=data.contacts[cEditIdx];document.getElementById('cName').value=c.name;document.getElementById('cRole').value=c.role;document.getElementById('cPhone').value=c.phone||'';document.getElementById('cWhatsapp').value=c.whatsapp||'';document.getElementById('cNotes').value=c.notes||'';}
+  else{['cName','cPhone','cWhatsapp','cNotes'].forEach(id=>document.getElementById(id).value='');}
   openModal('contactModal');
 }
-function editContact(i) { openContactModal(i); }
-function deleteContact(i) {
-  if (confirm('Delete contact?')) { data.contacts.splice(i,1); saveData(); renderContacts(); toast('Contact deleted'); }
-}
-function saveContact() {
-  const name = document.getElementById('cName').value.trim();
-  if (!name) { alert('Enter a name'); return; }
-  const c = { name, role:document.getElementById('cRole').value, phone:document.getElementById('cPhone').value, whatsapp:document.getElementById('cWhatsapp').value, notes:document.getElementById('cNotes').value };
-  if (cEditIdx >= 0) data.contacts[cEditIdx] = c;
-  else data.contacts.push(c);
-  saveData(); closeModal('contactModal'); renderContacts(); toast('Contact saved!');
+function editContact(i){openContactModal(i);}
+async function deleteContact(i){if(!confirm('Delete contact?'))return;const id=data.contacts[i].id;data.contacts.splice(i,1);await deleteItem('contacts',id);renderContacts();toast('Contact deleted');}
+async function saveContact(){
+  const name=document.getElementById('cName').value.trim();if(!name){alert('Enter a name');return;}
+  const c={id:cEditIdx>=0?data.contacts[cEditIdx].id:Date.now(),name,role:document.getElementById('cRole').value,phone:document.getElementById('cPhone').value,whatsapp:document.getElementById('cWhatsapp').value,notes:document.getElementById('cNotes').value};
+  if(cEditIdx>=0)data.contacts[cEditIdx]=c;else data.contacts.push(c);
+  await saveItem('contacts',c);closeModal('contactModal');renderContacts();toast('Contact saved!');
 }
 
 // ============ ROOMS ============
-function renderRooms() {
-  const grid = document.getElementById('roomsGrid');
-  const empty = document.getElementById('roomEmpty');
-  const q = (document.getElementById('roomSearch').value||'').toLowerCase();
-  const rooms = data.rooms.filter(r => !q || r.guest.toLowerCase().includes(q) || r.num.toLowerCase().includes(q));
-  if (!rooms.length) { grid.innerHTML=''; empty.style.display='block'; return; }
-  empty.style.display = 'none';
-  grid.innerHTML = rooms.map((r,i) => `
-    <div class="room-card">
-      <div class="room-number">${r.num}</div>
-      <div class="room-guest">${r.guest}</div>
-      <div class="room-floor">${r.floor||''}</div>
-      ${r.checkin ? `<div style="font-size:0.72rem;color:var(--soft);margin-top:4px">🗓 ${r.checkin} → ${r.checkout||'?'}</div>` : ''}
-      ${r.notes ? `<div style="font-size:0.72rem;color:var(--soft);margin-top:2px">${r.notes}</div>` : ''}
-      <div style="display:flex;gap:6px;margin-top:10px">
-        <button class="btn btn-sm btn-outline" onclick="editRoom(${data.rooms.indexOf(r)})">✏️</button>
-        <button class="btn btn-sm btn-danger" onclick="deleteRoom(${data.rooms.indexOf(r)})">✕</button>
+function renderRooms(){
+  const grid=document.getElementById('roomsGrid');const empty=document.getElementById('roomEmpty');
+  const q=(document.getElementById('roomSearch').value||'').toLowerCase();
+  const rooms=data.rooms.filter(r=>!q||(r.guest||'').toLowerCase().includes(q)||(r.num||'').toLowerCase().includes(q));
+  if(!rooms.length){grid.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  grid.innerHTML=rooms.map(r=>{
+    const i=data.rooms.findIndex(x=>x.id===r.id);
+    const waMsg=encodeURIComponent(`Hi ${r.guest}! 🎉 Your room at the wedding venue is Room ${r.num}${r.floor?', '+r.floor:''}. Welcome, we're so excited to have you! 💕`);
+    return `<div class="room-card">
+      <div class="room-number">${r.num}</div><div class="room-guest">${r.guest}</div><div class="room-floor">${r.floor||''}</div>
+      ${r.checkin?`<div style="font-size:0.72rem;color:var(--soft);margin-top:4px">🗓 ${r.checkin} → ${r.checkout||'?'}</div>`:''}
+      ${r.notes?`<div style="font-size:0.72rem;color:var(--soft);margin-top:2px">${r.notes}</div>`:''}
+      <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+        <button class="btn btn-sm btn-outline" onclick="editRoom(${i})">✏️</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteRoom(${i})">✕</button>
+        ${r.phone?`<a href="https://wa.me/${r.phone.replace(/\D/g,'')}?text=${waMsg}" target="_blank" class="btn btn-sm btn-green" style="text-decoration:none">💬 WhatsApp</a>`:''}
       </div>
-    </div>
-  `).join('');
+    </div>`;}).join('');
 }
-
-let rEditIdx = -1;
-function openRoomModal(idx) {
-  rEditIdx = idx !== undefined ? idx : -1;
-  if (rEditIdx >= 0) {
-    const r = data.rooms[rEditIdx];
-    document.getElementById('rNum').value = r.num;
-    document.getElementById('rFloor').value = r.floor||'';
-    document.getElementById('rGuest').value = r.guest;
-    document.getElementById('rCheckin').value = r.checkin||'';
-    document.getElementById('rCheckout').value = r.checkout||'';
-    document.getElementById('rNotes').value = r.notes||'';
-  } else {
-    ['rNum','rFloor','rGuest','rCheckin','rCheckout','rNotes'].forEach(id => document.getElementById(id).value='');
-  }
+let rEditIdx=-1;
+function openRoomModal(idx){
+  rEditIdx=idx!==undefined?idx:-1;
+  if(rEditIdx>=0){const r=data.rooms[rEditIdx];document.getElementById('rNum').value=r.num;document.getElementById('rFloor').value=r.floor||'';document.getElementById('rGuest').value=r.guest;document.getElementById('rCheckin').value=r.checkin||'';document.getElementById('rCheckout').value=r.checkout||'';document.getElementById('rNotes').value=r.notes||'';document.getElementById('rPhone').value=r.phone||'';}
+  else{['rNum','rFloor','rGuest','rCheckin','rCheckout','rNotes','rPhone'].forEach(id=>document.getElementById(id).value='');}
   openModal('roomModal');
 }
-function editRoom(i) { openRoomModal(i); }
-function deleteRoom(i) {
-  if (confirm('Delete room?')) { data.rooms.splice(i,1); saveData(); renderRooms(); toast('Room deleted'); }
-}
-function saveRoom() {
-  const num = document.getElementById('rNum').value.trim();
-  if (!num) { alert('Enter room number'); return; }
-  const r = { num, floor:document.getElementById('rFloor').value, guest:document.getElementById('rGuest').value, checkin:document.getElementById('rCheckin').value, checkout:document.getElementById('rCheckout').value, notes:document.getElementById('rNotes').value };
-  if (rEditIdx >= 0) data.rooms[rEditIdx] = r;
-  else data.rooms.push(r);
-  saveData(); closeModal('roomModal'); renderRooms(); toast('Room saved!');
+function editRoom(i){openRoomModal(i);}
+async function deleteRoom(i){if(!confirm('Delete room?'))return;const id=data.rooms[i].id;data.rooms.splice(i,1);await deleteItem('rooms',id);renderRooms();toast('Room deleted');}
+async function saveRoom(){
+  const num=document.getElementById('rNum').value.trim();if(!num){alert('Enter room number');return;}
+  const r={id:rEditIdx>=0?data.rooms[rEditIdx].id:Date.now(),num,floor:document.getElementById('rFloor').value,guest:document.getElementById('rGuest').value,checkin:document.getElementById('rCheckin').value,checkout:document.getElementById('rCheckout').value,notes:document.getElementById('rNotes').value,phone:document.getElementById('rPhone').value};
+  if(rEditIdx>=0)data.rooms[rEditIdx]=r;else data.rooms.push(r);
+  await saveItem('rooms',r);closeModal('roomModal');renderRooms();toast('Room saved!');
 }
 
 // ============ SCHEDULE ============
-function renderSchedule() {
-  const container = document.getElementById('scheduleContainer');
-  const empty = document.getElementById('scheduleEmpty');
-  if (!data.schedule.length) { container.innerHTML=''; empty.style.display='block'; return; }
-  empty.style.display = 'none';
-  const days = {};
-  data.schedule.forEach((e,i) => {
-    const d = e.day || 'General';
-    if (!days[d]) days[d] = [];
-    days[d].push({...e, idx:i});
-  });
-  container.innerHTML = Object.entries(days).map(([day, events]) => `
+function renderSchedule(){
+  const container=document.getElementById('scheduleContainer');const empty=document.getElementById('scheduleEmpty');
+  if(!data.schedule.length){container.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  const days={};
+  data.schedule.forEach((e,i)=>{const d=e.day||'General';if(!days[d])days[d]=[];days[d].push({...e,idx:i});});
+  container.innerHTML=Object.entries(days).map(([day,events])=>`
     <div class="schedule-day">
-      <div class="schedule-day-header">
-        <span>${day}</span>
-        <span style="font-size:0.75rem;opacity:0.7">${events.length} events</span>
-      </div>
-      ${events.sort((a,b) => (a.time||'').localeCompare(b.time||'')).map(e => `
+      <div class="schedule-day-header"><span>${day}</span><span style="font-size:0.75rem;opacity:0.7">${events.length} events</span></div>
+      ${events.sort((a,b)=>(a.time||'').localeCompare(b.time||'')).map(e=>`
         <div class="schedule-item">
           <div class="schedule-time">${fmtTime(e.time)}</div>
-          <div class="schedule-event">
-            <div class="schedule-event-title">${e.title}</div>
-            ${e.desc ? `<div class="schedule-event-desc">${e.desc}</div>` : ''}
-            ${e.loc ? `<div class="schedule-event-desc">📍 ${e.loc}</div>` : ''}
+          <div class="schedule-event"><div class="schedule-event-title">${e.title}</div>
+            ${e.desc?`<div class="schedule-event-desc">${e.desc}</div>`:''}
+            ${e.loc?`<div class="schedule-event-desc">📍 ${e.loc}</div>`:''}
           </div>
           <div class="item-actions">
             <button class="btn btn-sm btn-outline" onclick="editSchedule(${e.idx})">✏️</button>
             <button class="btn btn-sm btn-danger" onclick="deleteSchedule(${e.idx})">✕</button>
           </div>
-        </div>
-      `).join('')}
-    </div>
-  `).join('');
+        </div>`).join('')}
+    </div>`).join('');
 }
-
-let schEditIdx = -1;
-function openScheduleModal(idx) {
-  schEditIdx = idx !== undefined ? idx : -1;
-  if (schEditIdx >= 0) {
-    const e = data.schedule[schEditIdx];
-    document.getElementById('schTitle').value = e.title;
-    document.getElementById('schDay').value = e.day||'';
-    document.getElementById('schTime').value = e.time||'';
-    document.getElementById('schDesc').value = e.desc||'';
-    document.getElementById('schLoc').value = e.loc||'';
-  } else {
-    ['schTitle','schDay','schTime','schDesc','schLoc'].forEach(id => document.getElementById(id).value='');
-  }
+let schEditIdx=-1;
+function openScheduleModal(idx){
+  schEditIdx=idx!==undefined?idx:-1;
+  if(schEditIdx>=0){const e=data.schedule[schEditIdx];document.getElementById('schTitle').value=e.title;document.getElementById('schDay').value=e.day||'';document.getElementById('schTime').value=e.time||'';document.getElementById('schDesc').value=e.desc||'';document.getElementById('schLoc').value=e.loc||'';}
+  else{['schTitle','schDay','schTime','schDesc','schLoc'].forEach(id=>document.getElementById(id).value='');}
   openModal('scheduleModal');
 }
-function editSchedule(i) { openScheduleModal(i); }
-function deleteSchedule(i) {
-  if (confirm('Delete event?')) { data.schedule.splice(i,1); saveData(); renderSchedule(); toast('Event deleted'); }
-}
-function saveScheduleEvent() {
-  const title = document.getElementById('schTitle').value.trim();
-  if (!title) { alert('Enter event title'); return; }
-  const e = { title, day:document.getElementById('schDay').value, time:document.getElementById('schTime').value, desc:document.getElementById('schDesc').value, loc:document.getElementById('schLoc').value };
-  if (schEditIdx >= 0) data.schedule[schEditIdx] = e;
-  else data.schedule.push(e);
-  saveData(); closeModal('scheduleModal'); renderSchedule(); toast('Event saved!');
+function editSchedule(i){openScheduleModal(i);}
+async function deleteSchedule(i){if(!confirm('Delete event?'))return;const id=data.schedule[i].id;data.schedule.splice(i,1);await deleteItem('schedule',id);renderSchedule();toast('Event deleted');}
+async function saveScheduleEvent(){
+  const title=document.getElementById('schTitle').value.trim();if(!title){alert('Enter event title');return;}
+  const e={id:schEditIdx>=0?data.schedule[schEditIdx].id:Date.now(),title,day:document.getElementById('schDay').value,time:document.getElementById('schTime').value,desc:document.getElementById('schDesc').value,loc:document.getElementById('schLoc').value};
+  if(schEditIdx>=0)data.schedule[schEditIdx]=e;else data.schedule.push(e);
+  await saveItem('schedule',e);closeModal('scheduleModal');renderSchedule();toast('Event saved!');
 }
 
 // ============ SANGEET ============
-function renderPerformances() {
-  const list = document.getElementById('performanceList');
-  const empty = document.getElementById('perfEmpty');
-  if (!data.performances.length) { list.innerHTML=''; empty.style.display='block'; document.getElementById('totalShowTime').textContent='0 mins'; return; }
+function renderPerformances(){
+  const list=document.getElementById('performanceList');const empty=document.getElementById('perfEmpty');
+  if(!data.performances.length){list.innerHTML='';empty.style.display='block';document.getElementById('totalShowTime').textContent='0 mins';return;}
   empty.style.display='none';
-  const total = data.performances.reduce((s,p) => s+(parseInt(p.duration)||0),0);
-  document.getElementById('totalShowTime').textContent = total >= 60 ? `${Math.floor(total/60)}h ${total%60}m` : `${total} mins`;
-  list.innerHTML = data.performances.map((p,i) => `
+  const total=data.performances.reduce((s,p)=>s+(parseInt(p.duration)||0),0);
+  document.getElementById('totalShowTime').textContent=total>=60?`${Math.floor(total/60)}h ${total%60}m`:`${total} mins`;
+  list.innerHTML=data.performances.map((p,i)=>`
     <li class="performance-item" draggable="true" data-idx="${i}" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropPerf(event)" ondragend="dragEnd(event)">
-      <span class="drag-handle">⠿</span>
-      <div class="perf-order">${i+1}</div>
-      <div class="perf-info">
-        <div class="perf-name">${p.name}</div>
-        <div class="perf-songs">${p.songs||''}</div>
-        <div style="font-size:0.72rem;color:var(--soft);margin-top:2px">${p.side||''} ${p.notes?'• '+p.notes:''}</div>
-      </div>
-      ${p.duration ? `<div class="perf-duration">${p.duration} min</div>` : ''}
+      <span class="drag-handle">⠿</span><div class="perf-order">${i+1}</div>
+      <div class="perf-info"><div class="perf-name">${p.name}</div><div class="perf-songs">${p.songs||''}</div>
+        <div style="font-size:0.72rem;color:var(--soft);margin-top:2px">${p.side||''} ${p.notes?'• '+p.notes:''}</div></div>
+      ${p.duration?`<div class="perf-duration">${p.duration} min</div>`:''}
       <div style="display:flex;flex-direction:column;gap:6px">
         <button class="btn btn-sm btn-outline" onclick="editPerformance(${i})">✏️</button>
         <button class="btn btn-sm btn-danger" onclick="deletePerformance(${i})">✕</button>
       </div>
-    </li>
-  `).join('');
+    </li>`).join('');
 }
-
-// Drag to reorder
-function dragStart(e) { dragSrcEl = e.currentTarget; e.dataTransfer.effectAllowed='move'; e.currentTarget.style.opacity='0.5'; }
-function dragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect='move'; }
-function dragEnd(e) { e.currentTarget.style.opacity='1'; }
-function dropPerf(e) {
-  e.preventDefault();
-  const from = parseInt(dragSrcEl.dataset.idx);
-  const to = parseInt(e.currentTarget.dataset.idx);
-  if (from === to) return;
-  const arr = data.performances;
-  const [item] = arr.splice(from,1);
-  arr.splice(to,0,item);
-  saveData(); renderPerformances();
+function dragStart(e){dragSrcEl=e.currentTarget;e.dataTransfer.effectAllowed='move';e.currentTarget.style.opacity='0.5';}
+function dragOver(e){e.preventDefault();e.dataTransfer.dropEffect='move';}
+function dragEnd(e){e.currentTarget.style.opacity='1';}
+async function dropPerf(e){
+  e.preventDefault();const from=parseInt(dragSrcEl.dataset.idx);const to=parseInt(e.currentTarget.dataset.idx);
+  if(from===to)return;const[item]=data.performances.splice(from,1);data.performances.splice(to,0,item);
+  data.performances.forEach((p,i)=>p.orderIndex=i);
+  for(const p of data.performances)await saveItem('performances',p);renderPerformances();
 }
-
-let pEditIdx = -1;
-function openPerformanceModal(idx) {
-  pEditIdx = idx !== undefined ? idx : -1;
-  if (pEditIdx >= 0) {
-    const p = data.performances[pEditIdx];
-    document.getElementById('pName').value = p.name;
-    document.getElementById('pSongs').value = p.songs||'';
-    document.getElementById('pDuration').value = p.duration||'';
-    document.getElementById('pSide').value = p.side||"Bride's Side";
-    document.getElementById('pNotes').value = p.notes||'';
-  } else {
-    ['pName','pSongs','pDuration','pNotes'].forEach(id => document.getElementById(id).value='');
-  }
+let pEditIdx=-1;
+function openPerformanceModal(idx){
+  pEditIdx=idx!==undefined?idx:-1;
+  if(pEditIdx>=0){const p=data.performances[pEditIdx];document.getElementById('pName').value=p.name;document.getElementById('pSongs').value=p.songs||'';document.getElementById('pDuration').value=p.duration||'';document.getElementById('pSide').value=p.side||"Bride's Side";document.getElementById('pNotes').value=p.notes||'';}
+  else{['pName','pSongs','pDuration','pNotes'].forEach(id=>document.getElementById(id).value='');}
   openModal('performanceModal');
 }
-function editPerformance(i) { openPerformanceModal(i); }
-function deletePerformance(i) {
-  if (confirm('Delete performance?')) { data.performances.splice(i,1); saveData(); renderPerformances(); toast('Performance deleted'); }
+function editPerformance(i){openPerformanceModal(i);}
+async function deletePerformance(i){if(!confirm('Delete performance?'))return;const id=data.performances[i].id;data.performances.splice(i,1);await deleteItem('performances',id);renderPerformances();toast('Performance deleted');}
+async function savePerformance(){
+  const name=document.getElementById('pName').value.trim();if(!name){alert('Enter performer name');return;}
+  const p={id:pEditIdx>=0?data.performances[pEditIdx].id:Date.now(),name,songs:document.getElementById('pSongs').value,duration:document.getElementById('pDuration').value,side:document.getElementById('pSide').value,notes:document.getElementById('pNotes').value,orderIndex:pEditIdx>=0?(data.performances[pEditIdx].orderIndex||0):data.performances.length};
+  if(pEditIdx>=0)data.performances[pEditIdx]=p;else data.performances.push(p);
+  await saveItem('performances',p);closeModal('performanceModal');renderPerformances();toast('Performance saved!');
 }
-function savePerformance() {
-  const name = document.getElementById('pName').value.trim();
-  if (!name) { alert('Enter performer name'); return; }
-  const p = { name, songs:document.getElementById('pSongs').value, duration:document.getElementById('pDuration').value, side:document.getElementById('pSide').value, notes:document.getElementById('pNotes').value };
-  if (pEditIdx >= 0) data.performances[pEditIdx] = p;
-  else data.performances.push(p);
-  saveData(); closeModal('performanceModal'); renderPerformances(); toast('Performance saved!');
+
+// ============ TASKS ============
+let taskCatFilter='all';
+function filterTasks(cat){taskCatFilter=cat;document.querySelectorAll('#taskCatFilter .fn-tab').forEach(t=>t.classList.toggle('active',t.dataset.cat===cat));renderTasks();}
+function renderTasks(){
+  if(!data.tasks)data.tasks=[];
+  const list=document.getElementById('taskList');const empty=document.getElementById('taskEmpty');
+  const total=data.tasks.length;const done=data.tasks.filter(t=>t.done).length;const pct=total?Math.round(done/total*100):0;
+  if(document.getElementById('taskProgressBar'))document.getElementById('taskProgressBar').style.width=pct+'%';
+  if(document.getElementById('taskSummary'))document.getElementById('taskSummary').textContent=`${done} of ${total} tasks done (${pct}%)`;
+  if(document.getElementById('dashTaskProgress'))document.getElementById('dashTaskProgress').innerHTML=`<div style="display:flex;justify-content:space-between;font-size:0.8rem;color:var(--soft);margin-bottom:4px"><span>${done} of ${total} completed</span><span>${pct}%</span></div><div class="progress-wrap"><div class="progress-bar" style="width:${pct}%"></div></div>`;
+  if(document.getElementById('dashTaskList')){const pending=data.tasks.filter(t=>!t.done&&t.priority==='high').slice(0,4);document.getElementById('dashTaskList').innerHTML=pending.length?pending.map(t=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0e8e4"><div class="task-check ${t.done?'checked':''}" onclick="toggleTask('${t.id}')">✓</div><div style="flex:1"><div style="font-size:0.88rem;font-weight:500">${t.title}</div>${t.due?`<div style="font-size:0.72rem;color:var(--soft)">Due: ${t.due}</div>`:''}</div><span style="font-size:0.65rem;background:#fde8d8;color:#a05020;padding:2px 8px;border-radius:10px;font-weight:600">HIGH</span></div>`).join(''):`<div style="text-align:center;padding:16px;color:var(--soft);font-size:0.85rem">🎉 No high-priority tasks pending!</div>`;}
+  if(!list)return;
+  const filtered=taskCatFilter==='all'?data.tasks:data.tasks.filter(t=>t.cat===taskCatFilter);
+  if(!filtered.length){list.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  const po={high:0,medium:1,low:2};
+  const sorted=[...filtered].sort((a,b)=>{if(a.done!==b.done)return a.done?1:-1;return(po[a.priority]||1)-(po[b.priority]||1);});
+  const pl={high:'🔴 High',medium:'🟡 Medium',low:'🟢 Low'};
+  const cl={venue:'🏛 Venue',catering:'🍽 Catering',attire:'👗 Attire',decor:'🌸 Decor',photography:'📸 Photography',invites:'💌 Invites',travel:'✈️ Travel',other:'📌 Other'};
+  list.innerHTML=sorted.map(t=>`<div class="task-item ${t.done?'done':''} priority-${t.priority||'medium'}">
+    <button class="task-check ${t.done?'checked':''}" onclick="toggleTask('${t.id}')">✓</button>
+    <div style="flex:1;min-width:0"><div class="task-title">${t.title}</div>
+      <div class="task-meta"><span>${cl[t.cat]||t.cat}</span><span>${pl[t.priority]||''}</span>${t.due?`<span>📅 ${t.due}</span>`:''}${t.assigned?`<span>👤 ${t.assigned}</span>`:''}${t.notes?`<span>📝 ${t.notes}</span>`:''}</div>
+    </div>
+    <div class="task-actions"><button class="btn btn-sm btn-outline" onclick="editTask('${t.id}')">✏️</button><button class="btn btn-sm btn-danger" onclick="deleteTask('${t.id}')">✕</button></div>
+  </div>`).join('');
 }
+async function toggleTask(id){const t=data.tasks.find(t=>t.id===id);if(t){t.done=!t.done;await saveItem('tasks',t);renderTasks();}}
+let tEditId=null;
+function openTaskModal(id){
+  tEditId=id||null;
+  if(tEditId){const t=data.tasks.find(t=>t.id===tEditId);document.getElementById('taskModalTitle').textContent='Edit Task';document.getElementById('tTitle').value=t.title;document.getElementById('tCat').value=t.cat;document.getElementById('tPriority').value=t.priority||'medium';document.getElementById('tDue').value=t.due||'';document.getElementById('tAssigned').value=t.assigned||'';document.getElementById('tNotes').value=t.notes||'';}
+  else{document.getElementById('taskModalTitle').textContent='Add Task';['tTitle','tDue','tAssigned','tNotes'].forEach(id=>document.getElementById(id).value='');document.getElementById('tPriority').value='medium';}
+  openModal('taskModal');
+}
+function editTask(id){openTaskModal(id);}
+async function deleteTask(id){if(!confirm('Delete task?'))return;data.tasks=data.tasks.filter(t=>t.id!==id);await deleteItem('tasks',id);renderTasks();toast('Task deleted');}
+async function saveTask(){
+  const title=document.getElementById('tTitle').value.trim();if(!title){alert('Enter task title');return;}
+  const task={id:tEditId||('t'+Date.now()),title,cat:document.getElementById('tCat').value,priority:document.getElementById('tPriority').value,due:document.getElementById('tDue').value,assigned:document.getElementById('tAssigned').value,notes:document.getElementById('tNotes').value,done:false};
+  if(tEditId){const idx=data.tasks.findIndex(t=>t.id===tEditId);task.done=data.tasks[idx].done;data.tasks[idx]=task;}else data.tasks.push(task);
+  await saveItem('tasks',task);closeModal('taskModal');renderTasks();toast(tEditId?'Task updated!':'Task added!');
+}
+
+// ============ GUEST CHECK-IN ============
+function renderGuests(){
+  if(!data.guests)data.guests=[];
+  const list=document.getElementById('guestList');const empty=document.getElementById('guestEmpty');
+  const q=(document.getElementById('gcSearch')?.value||'').toLowerCase();
+  const filtered=data.guests.filter(g=>!q||g.name.toLowerCase().includes(q)||(g.room||'').toLowerCase().includes(q));
+  const statsEl=document.getElementById('guestStats');
+  if(statsEl){const total=data.guests.length;const cin=data.guests.filter(g=>g.status==='checkedin').length;const cout=data.guests.filter(g=>g.status==='checkedout').length;const ppl=data.guests.reduce((s,g)=>s+(parseInt(g.people)||1),0);statsEl.innerHTML=`<div class="stat-card"><div class="stat-value">${total}</div><div class="stat-label">Registered</div></div><div class="stat-card green"><div class="stat-value">${cin}</div><div class="stat-label">Checked In</div></div><div class="stat-card"><div class="stat-value" style="color:var(--gold)">${cout}</div><div class="stat-label">Checked Out</div></div><div class="stat-card gold"><div class="stat-value">${ppl}</div><div class="stat-label">Total People</div></div>`;}
+  if(!list)return;
+  if(!filtered.length){list.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  const sl={registered:'Registered',checkedin:'Checked In ✅',checkedout:'Checked Out 🏠'};
+  const sc={registered:'gs-registered',checkedin:'gs-checkedin',checkedout:'gs-checkedout'};
+  list.innerHTML=filtered.map(g=>{const idx=data.guests.findIndex(x=>x.id===g.id);return`<div class="guest-card ${g.status}">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+      <div><div class="guest-name">${g.name} ${parseInt(g.people)>1?`<span style="font-size:0.75rem;background:var(--gold-light);padding:1px 8px;border-radius:10px;color:var(--mid)">${g.people} people</span>`:''}</div>
+        <div class="guest-meta">${g.relation?`<span>👨‍👩‍👧 ${g.relation}</span>`:''}${g.room?`<span>🛏 Room ${g.room}</span>`:''}${g.staying?`<span>🏨 ${g.staying}</span>`:''}${g.phone?`<span>📞 <a href="tel:${g.phone}" style="color:var(--soft)">${g.phone}</a></span>`:''}${g.note?`<span>📝 ${g.note}</span>`:''}</div>
+        ${g.checkinTime?`<div style="font-size:0.7rem;color:var(--soft);margin-top:4px">✅ Checked in: ${g.checkinTime}</div>`:''}
+        ${g.checkoutTime?`<div style="font-size:0.7rem;color:var(--soft)">🏠 Checked out: ${g.checkoutTime}</div>`:''}
+      </div>
+      <span class="guest-status-badge ${sc[g.status]||'gs-registered'}">${sl[g.status]||'Registered'}</span>
+    </div>
+    <div class="guest-actions">
+      ${g.status==='registered'?`<button class="btn btn-sm btn-green" onclick="guestCheckIn(${idx})">✅ Check In</button>`:''}
+      ${g.status==='checkedin'?`<button class="btn btn-sm btn-outline" onclick="guestCheckOut(${idx})">🏠 Check Out</button>`:''}
+      ${g.status==='checkedout'?`<button class="btn btn-sm btn-outline" style="opacity:0.6" disabled>Departed</button>`:''}
+      <button class="btn btn-sm btn-danger" onclick="deleteGuest(${idx})">✕</button>
+    </div>
+  </div>`;}).join('');
+}
+async function guestRegister(){
+  const name=document.getElementById('gcName').value.trim();if(!name){alert('Please enter your name');return;}
+  if(!data.guests)data.guests=[];
+  const guest={id:'g'+Date.now(),name,phone:document.getElementById('gcPhone').value,relation:document.getElementById('gcRelation').value,people:document.getElementById('gcPeople').value||1,room:document.getElementById('gcRoom').value,staying:document.getElementById('gcStaying').value,note:document.getElementById('gcNote').value,status:'registered',registeredTime:new Date().toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})};
+  data.guests.push(guest);await saveItem('guests',guest);
+  ['gcName','gcPhone','gcRoom','gcNote'].forEach(id=>document.getElementById(id).value='');document.getElementById('gcPeople').value='1';
+  renderGuests();toast(`Welcome, ${name}! 🎉 Registered on Firebase!`);
+}
+async function guestCheckIn(idx){data.guests[idx].status='checkedin';data.guests[idx].checkinTime=new Date().toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});await saveItem('guests',data.guests[idx]);renderGuests();toast(`${data.guests[idx].name} checked in! 🎉`);}
+async function guestCheckOut(idx){if(!confirm(`Confirm check-out for ${data.guests[idx].name}?`))return;data.guests[idx].status='checkedout';data.guests[idx].checkoutTime=new Date().toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});await saveItem('guests',data.guests[idx]);renderGuests();toast(`${data.guests[idx].name} checked out. Safe travels! 👋`);}
+async function deleteGuest(idx){if(!confirm('Remove this guest?'))return;const id=data.guests[idx].id;data.guests.splice(idx,1);await deleteItem('guests',id);renderGuests();toast('Guest removed');}
 
 // ============ UTILS ============
-function openModal(id) { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if(e.target===e.currentTarget) m.classList.remove('open'); }));
-
-function fmt(n) {
-  if (n >= 100000) return (n/100000).toFixed(1) + 'L';
-  if (n >= 1000) return (n/1000).toFixed(1) + 'k';
-  return (n||0).toFixed(0);
-}
-function fmtTime(t) {
-  if (!t) return '—';
-  const [h,m] = t.split(':');
-  const hr = parseInt(h);
-  return `${hr>12?hr-12:hr||12}:${m} ${hr>=12?'PM':'AM'}`;
-}
-
-function toast(msg) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), 2500);
-}
-
-function renderAll() {
-  renderDashboard();
-  renderExpenses();
-  renderPhotos();
-  renderContacts();
-  renderRooms();
-  renderSchedule();
-  renderPerformances();
-}
-
-// Export/Import
-function exportData() {
-  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'wedding-planner-data.json';
-  a.click();
-}
-function importData(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  const r = new FileReader();
-  r.onload = ev => {
-    try {
-      data = JSON.parse(ev.target.result);
-      saveData(); renderAll(); applySettings(); toast('Data imported!');
-    } catch { alert('Invalid file format'); }
-  };
-  r.readAsText(file);
-}
-function clearAllData() {
-  if (confirm('Clear ALL wedding planner data? This cannot be undone!')) {
-    data = { settings:{names:'',date:'',venue:'',budget:500000,drive:''}, expenses:[], contacts:[], rooms:[], schedule:[], performances:[], photos:{} };
-    saveData(); renderAll(); applySettings(); toast('All data cleared');
-  }
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===e.currentTarget)m.classList.remove('open');}));
+function fmt(n){if(n>=100000)return(n/100000).toFixed(1)+'L';if(n>=1000)return(n/1000).toFixed(1)+'k';return(n||0).toFixed(0);}
+function fmtTime(t){if(!t)return'—';const[h,m]=t.split(':');const hr=parseInt(h);return`${hr>12?hr-12:hr||12}:${m} ${hr>=12?'PM':'AM'}`;}
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2800);}
+function renderAll(){renderDashboard();renderExpenses();renderPhotos();renderContacts();renderRooms();renderSchedule();renderPerformances();renderTasks();renderGuests();}
+function exportData(){const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='wedding-planner-backup.json';a.click();}
+function importData(e){const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=async ev=>{try{data=JSON.parse(ev.target.result);await saveData();renderAll();applySettings();toast('Imported & synced to Firebase!');}catch{alert('Invalid file format');}};r.readAsText(file);}
+async function clearAllData(){
+  if(!confirm('Delete ALL data from Firebase permanently?'))return;
+  for(const col of[...COLLECTIONS,'photos','settings']){const snap=await db.collection(col).get();for(const doc of snap.docs)await doc.ref.delete();}
+  data={settings:{names:'',date:'',venue:'',budget:500000,drive:''},expenses:[],contacts:[],rooms:[],schedule:[],performances:[],photos:{},tasks:[],guests:[]};
+  renderAll();applySettings();toast('All data cleared from Firebase');
 }
 
 // Init
 loadData();
 </script>
-</body>
-</html>
+</body></html>
